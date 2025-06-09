@@ -1,11 +1,11 @@
 "use client"
 
-import type React from "react"
+import React, { useState, useEffect } from "react"
 import { CloseIcon, DocumentIcon, LinkIcon, VideoIcon, TwitterIcon, ExternalLinkIcon } from "./ui/icons"
-import { Button } from "./ui/button"
 import type { ContentItem } from "./content-card"
 import { extractYouTubeVideoId, getYouTubeThumbnail, isYouTubeUrl } from "../utils/youtube"
 import { isTwitterUrl } from "../utils/twitter"
+import { toast } from "sonner"
 
 interface PreviewModalProps {
   isOpen: boolean
@@ -47,11 +47,23 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({ isOpen, onClose, ite
     }
   }
 
-  const handleOpenLink = () => {
-    if (item.link) {
-      window.open(item.link, "_blank", "noopener,noreferrer")
+  const isValidUrl = (url: string | undefined) => {
+    if (!url) return false;
+    try {
+      new URL(url);
+      return url.startsWith('https://');
+    } catch {
+      return false;
     }
-  }
+  };
+
+  const handleGoToLink = () => {
+    if (isValidUrl(item.link)) {
+      window.open(item.link, '_blank');
+    } else {
+      toast.error('Invalid URL. Link must start with https://');
+    }
+  };
 
   const renderYouTubeThumbnail = () => {
     if (item.type === "video" && item.link && isYouTubeUrl(item.link)) {
@@ -68,7 +80,7 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({ isOpen, onClose, ite
                 darkMode ? "bg-gray-700 border-gray-600" : "bg-gray-50 border-gray-200"
               }`}
             >
-              <div className="relative group cursor-pointer" onClick={handleOpenLink}>
+              <div className="relative group cursor-pointer" onClick={handleGoToLink}>
                 <img
                   src={thumbnailUrl || "/placeholder.svg"}
                   alt={`YouTube thumbnail for ${item.title}`}
@@ -109,7 +121,7 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({ isOpen, onClose, ite
               darkMode ? "bg-gray-700 border-gray-600" : "bg-gray-50 border-gray-200"
             }`}
           >
-            <div className="cursor-pointer" onClick={handleOpenLink}>
+            <div className="cursor-pointer" onClick={handleGoToLink}>
               <div
                 className={`w-full h-48 rounded-lg border flex items-center justify-center transition-colors duration-200 ${
                   darkMode
@@ -168,7 +180,7 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({ isOpen, onClose, ite
           <div className="flex items-center gap-2">
             {hasLink && (
               <button
-                onClick={handleOpenLink}
+                onClick={handleGoToLink}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-200 ${
                   darkMode
                     ? "text-blue-400 hover:text-blue-300 hover:bg-gray-700"
@@ -235,7 +247,7 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({ isOpen, onClose, ite
               {hasLink ? (
                 <p
                   className={`break-all cursor-pointer hover:underline ${darkMode ? "text-blue-400" : "text-blue-600"}`}
-                  onClick={handleOpenLink}
+                  onClick={handleGoToLink}
                 >
                   {item.link}
                 </p>
@@ -283,48 +295,12 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({ isOpen, onClose, ite
                   darkMode ? "bg-gray-700 border-gray-600" : "bg-gray-50 border-gray-200"
                 }`}
               >
-                <div className="flex flex-wrap gap-2">
-                  {item.tags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className={`px-3 py-1 rounded-full text-sm border transition-colors duration-200 ${
-                        darkMode
-                          ? "bg-gray-800 text-gray-300 border-gray-600"
-                          : "bg-white text-gray-700 border-gray-200"
-                      }`}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
+                {item.tags.map((tag, index) => (
+                  <span key={index} className={darkMode ? "text-gray-300" : "text-gray-700"}>{tag}</span>
+                ))}
               </div>
             </div>
           )}
-
-          {/* Created Date Section */}
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-900"}`}>
-              Created
-            </label>
-            <div
-              className={`p-3 rounded-lg border transition-colors duration-200 ${
-                darkMode ? "bg-gray-700 border-gray-600" : "bg-gray-50 border-gray-200"
-              }`}
-            >
-              <p className={darkMode ? "text-white" : "text-gray-900"}>{new Date().toLocaleDateString()}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div
-          className={`flex justify-end gap-3 p-6 border-t transition-colors duration-200 ${
-            darkMode ? "bg-gray-800 border-gray-600" : "bg-gray-50 border-gray-200"
-          }`}
-        >
-          <Button variant={darkMode ? "dark" : "primary"} onClick={onClose}>
-            Close
-          </Button>
         </div>
       </div>
     </div>

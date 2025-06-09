@@ -29,7 +29,6 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   item,
   onDelete,
   onPreview,
-  onShare,
   onShowToast,
   darkMode,
 }) => {

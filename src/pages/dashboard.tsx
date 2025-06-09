@@ -11,7 +11,7 @@ import { ContentGrid } from "../components/content-grid"
 import { Sidebar } from "../components/sidebar"
 import { AddContentModal } from "../components/add-content-modal"
 import { PreviewModal } from "../components/preview-modal"
-import { ShareBrainModal } from "../components/share-brain-modal"
+
 import { ToastNotification } from "../components/toast-notification"
 
 interface Content {
@@ -160,18 +160,11 @@ export const Dashboard: React.FC = () => {
       }
 
       // Find the content item to get its _id
-      const contentToDelete = contents.find(item => item.id === id);
+      const contentToDelete = contents.find(item => item._id === id);
       console.log('Content to delete:', contentToDelete); // Debug log
 
       if (!contentToDelete) {
         handleShowToast("Content not found");
-        return;
-      }
-
-      // Make sure we're using the MongoDB _id
-      if (!contentToDelete._id) {
-        console.error('No _id found in content:', contentToDelete);
-        handleShowToast("Invalid content ID");
         return;
       }
 
@@ -186,7 +179,7 @@ export const Dashboard: React.FC = () => {
 
       if (response.status === 200) {
         // Remove from local state only after successful backend deletion
-        setContents(contents.filter((item) => item.id !== id));
+        setContents(contents.filter((item) => item._id !== id));
         handleShowToast("Content deleted successfully");
       }
     } catch (error: any) {
@@ -362,12 +355,7 @@ export const Dashboard: React.FC = () => {
         item={selectedItem}
         darkMode={darkMode}
       />
-      <ShareBrainModal
-        isOpen={isShareBrainOpen}
-        onClose={() => setIsShareBrainOpen(false)}
-        onShowToast={handleShowToast}
-        darkMode={darkMode}
-      />
+      
       <ToastNotification
         message={toastMessage}
         isVisible={showToast}

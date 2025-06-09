@@ -3,7 +3,7 @@
 import type React from "react"
 import { Input } from "./ui/input"
 import { Button } from "./ui/button"
-import { SearchIcon, LinkUploadIcon } from "./ui/icons"
+import { SearchIcon } from "./ui/icons"
 
 interface SearchBarProps {
   onSearch: (query: string) => void
@@ -12,7 +12,7 @@ interface SearchBarProps {
   darkMode: boolean
 }
 
-export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onShare, onAddContent, darkMode }) => {
+export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onAddContent, darkMode }) => {
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     onSearch(e.target.value)
   }
@@ -38,14 +38,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onShare, onAddCo
 
       {/* Action buttons on the rightmost side */}
       <div className="flex gap-3 items-center">
-        <Button
-          variant={darkMode ? "dark-outline" : "outline"}
-          onClick={onShare}
-          className="whitespace-nowrap px-4 py-2"
-        >
-          <LinkUploadIcon className={`w-4 h-4 mr-2 ${darkMode ? "text-white" : "text-black"}`} />
-          Share Brain
-        </Button>
+        
         <Button variant={darkMode ? "dark" : "primary"} onClick={onAddContent} className="whitespace-nowrap px-4 py-2">
           Create
         </Button>

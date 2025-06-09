@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Eye, EyeOff, Moon, Sun } from 'lucide-react';
+import {  Eye, EyeOff, Moon, Sun } from 'lucide-react';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { ToastNotification } from '../components/toast-notification';
 import axios from 'axios';

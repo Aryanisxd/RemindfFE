@@ -98,10 +98,10 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({ isOpen, onClos
           type: typeMapping[selectedType],
           title: title.trim(),
           link: link.trim(),
-          description: content.trim(),
+          description : content.trim() ,
           tags: tags.map(tag => tag.trim()), // Ensure tags are trimmed strings
         };
-        console.log('Sending request with data:', requestData);
+        
 
         const response = await fetch('http://localhost:8080/api/v1/content', {
           method: 'POST',
@@ -151,7 +151,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({ isOpen, onClos
         onAdd({
           type: finalType,
           title: title.trim(),
-          content: content.trim(),
+          content: content,
           link: link.trim(),
           tags,
         });
