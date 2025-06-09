@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Moon, Sun } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Moon, Sun } from 'lucide-react';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { ToastNotification } from '../components/toast-notification';
-import { api } from '../config';
+import axios from 'axios';
+
 
 const SignUp: React.FC = () => {
   const navigate = useNavigate();
@@ -19,39 +20,102 @@ const SignUp: React.FC = () => {
     password: '',
   });
 
+  const [passwordError, setPasswordError] = useState('');
+
+  const validatePassword = (password: string) => {
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    
+    if (!hasUpperCase && !hasSpecialChar) {
+      return 'Password must contain at least one uppercase letter and one special character';
+    } else if (!hasUpperCase) {
+      return 'Password must contain at least one uppercase letter';
+    } else if (!hasSpecialChar) {
+      return 'Password must contain at least one special character';
+    }
+    return '';
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
+    if (name === 'password') {
+      setPasswordError(validatePassword(value));
+    }
   };
 
   const handleSubmit = async (e: React.ChangeEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    // Validate password before submitting
+    const passwordValidationError = validatePassword(formData.password);
+    if (passwordValidationError) {
+      setPasswordError(passwordValidationError);
+      setToastMessage(passwordValidationError);
+      setShowToast(true);
+      return;
+    }
+
     setIsLoading(true);
     setToastMessage('Creating your account...');
     setShowToast(true);
 
     try {
-      const response = await api.auth.signup(formData.name, formData.email, formData.password);
+      const requestData = {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password
+      };
+      
+      console.log('Sending signup request with data:', {
+        ...requestData,
+        password: '***' // Hide password in logs
+      });
 
-      if (response.data?.token) {
+      const response = await axios.post('http://localhost:8080/api/v1/signup', 
+        requestData,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          withCredentials: true
+        }
+      );
+
+      if (response.status === 201) {
         setToastMessage('Account created successfully! Redirecting to sign in...');
         setShowToast(true);
         setTimeout(() => {
           navigate('/signin');
         }, 2000);
-      } else if (response.error) {
-        setToastMessage(response.error);
-        setShowToast(true);
       }
     } catch (error: any) {
-      if (error.response?.data?.message) {
-        setToastMessage(error.response.data.message);
+      console.error('Signup error:', error);
+      console.error('Request data:', {
+        name: formData.name,
+        email: formData.email,
+        password: '***' // Hide password in logs
+      });
+      
+      if (error.response?.status === 409) {
+        setToastMessage('Email already exists. Please sign in instead.');
+        setShowToast(true);
+        setTimeout(() => {
+          navigate('/signin');
+        }, 2000);
+      } else if (error.response?.status === 500) {
+        console.error('Server error details:', error.response?.data);
+        setToastMessage('Validation error. Please check your input and try again.');
+        setShowToast(true);
       } else {
-        setToastMessage('Network error. Please try again.');
+        setToastMessage(error.response?.data?.message || 'Something went wrong. Please try again.');
+        setShowToast(true);
       }
-      setShowToast(true);
     } finally {
       setIsLoading(false);
     }
@@ -192,15 +256,13 @@ const SignUp: React.FC = () => {
                 required
                 minLength={6}
                 maxLength={20}
-                pattern="(?=.*[A-Z])(?=.*[!@#$%^&*(),.?&quot;:{}|<>]).*"
-                title="Password must be 6-20 characters long, contain at least one uppercase letter and one special character"
                 className={`w-full px-4 py-3 rounded-xl transition-all duration-300 ${
                   isDarkMode
                     ? 'bg-white/10 border-white/20 text-white placeholder-gray-400 focus:border-white/40'
                     : 'bg-black/5 border-black/20 text-black placeholder-gray-500 focus:border-black/40'
                 } border focus:outline-none focus:ring-2 focus:ring-opacity-50 ${
                   isDarkMode ? 'focus:ring-white' : 'focus:ring-black'
-                }`}
+                } ${passwordError ? 'border-red-500' : ''}`}
                 placeholder="Enter your password"
               />
               <button
@@ -219,6 +281,14 @@ const SignUp: React.FC = () => {
                 )}
               </button>
             </div>
+            {passwordError && (
+              <p className="mt-2 text-sm text-red-500">
+                {passwordError}
+              </p>
+            )}
+            <p className="mt-2 text-sm text-gray-500">
+              Password must be 6-20 characters long, contain at least one uppercase letter and one special character
+            </p>
           </div>
 
           <button

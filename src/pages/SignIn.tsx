@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Moon, Sun } from 'lucide-react';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { ToastNotification } from '../components/toast-notification';
-import { api } from '../config';
+import apiService from '../config';
 
 const SignIn: React.FC = () => {
   const navigate = useNavigate();
@@ -32,7 +32,7 @@ const SignIn: React.FC = () => {
     setShowToast(true);
 
     try {
-      const response = await api.auth.signin(formData.email, formData.password);
+      const response = await apiService.auth.signin(formData.email, formData.password);
 
       if (response.data?.token) {
         setToastMessage('Signed in successfully! Redirecting to dashboard...');
@@ -45,7 +45,10 @@ const SignIn: React.FC = () => {
         setShowToast(true);
       }
     } catch (error: any) {
-      if (error.response?.data?.message) {
+      console.error('Signin error:', error);
+      if (error.response?.status === 401) {
+        setToastMessage('Invalid email or password. Please try again.');
+      } else if (error.response?.data?.message) {
         setToastMessage(error.response.data.message);
       } else {
         setToastMessage('Network error. Please try again.');

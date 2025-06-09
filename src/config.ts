@@ -1,105 +1,118 @@
 import axios from 'axios';
 import { toast } from 'sonner';
 
+// Use environment variable for API URL or fallback to default
 const API_BASE_URL = 'http://localhost:8080/api/v1';
 
-const axiosInstance = axios.create({
+// Create axios instance with default config
+const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
   },
-  withCredentials: true
+  withCredentials: true,
+  timeout: 10000, // Increase timeout to 10 seconds
 });
 
 // Add request interceptor
-axiosInstance.interceptors.request.use(
+api.interceptors.request.use(
   (config) => {
-    // Add auth token if it exists
+    // Add auth token if available
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // Add CORS headers
+    config.headers['Access-Control-Allow-Origin'] = 'http://localhost:3009';
+    config.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
+    config.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization';
     return config;
   },
   (error) => {
+    console.error('Request error:', error);
     return Promise.reject(error);
   }
 );
 
 // Add response interceptor
-axiosInstance.interceptors.response.use(
+api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response) {
-      // Handle specific status codes
-      switch (error.response.status) {
-        case 403:
-          toast.error('User already exists or there is another issue');
-          break;
-        case 401:
-          toast.error('Unauthorized access');
-          break;
-        case 409:
-          toast.error('User already exists');
-          break;
-        default:
-          toast.error(error.response.data?.message || 'An error occurred');
-      }
-    } else {
-      toast.error('Network error. Please try again.');
+    if (error.code === 'ERR_NETWORK') {
+      console.error('Network error:', error);
+      toast.error('Unable to connect to the server. Please check your internet connection.');
+    } else if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/signin';
     }
     return Promise.reject(error);
   }
 );
 
+// Type for API responses
 interface ApiResponse<T = any> {
   data?: T;
   error?: string;
+  message?: string;
 }
 
-export const api = {
+// API methods
+export const apiService = {
   auth: {
     signin: async (email: string, password: string): Promise<ApiResponse> => {
       try {
-        const response = await axiosInstance.post('/signin', { email, password });
-        if (response.data?.token) {
+        const response = await api.post('/signin', { email, password });
+        if (response.data.token) {
           localStorage.setItem('token', response.data.token);
         }
         return { data: response.data };
       } catch (error: any) {
-        return { error: error.response?.data?.message || 'Sign in failed' };
+        console.error('Signin API error:', error);
+        if (error.code === 'ERR_NETWORK') {
+          return { error: 'Unable to connect to the server. Please check your internet connection.' };
+        }
+        return { error: error.response?.data?.message || 'Failed to sign in' };
       }
     },
 
     signup: async (name: string, email: string, password: string): Promise<ApiResponse> => {
       try {
-        const response = await axiosInstance.post('/signup', { name, email, password });
-        if (response.data?.token) {
-          localStorage.setItem('token', response.data.token);
-        }
+        const response = await api.post('/signup', { name, email, password });
         return { data: response.data };
       } catch (error: any) {
-        return { error: error.response?.data?.message || 'Sign up failed' };
+        console.error('Signup API error:', error);
+        if (error.code === 'ERR_NETWORK') {
+          return { error: 'Unable to connect to the server. Please check your internet connection.' };
+        }
+        if (error.response?.data?.message?.includes('User already exist')) {
+          return { error: 'User already exists. Please sign in instead.' };
+        }
+        return { error: error.response?.data?.message || 'Failed to sign up' };
       }
     },
 
     signout: async (): Promise<ApiResponse> => {
       try {
-        await axiosInstance.post('/signout');
+        await api.post('/signout');
         localStorage.removeItem('token');
         return { data: { message: 'Signed out successfully' } };
       } catch (error: any) {
-        return { error: error.response?.data?.message || 'Sign out failed' };
+        console.error('Signout API error:', error);
+        return { error: error.response?.data?.message || 'Failed to sign out' };
       }
     },
 
     checkAuth: async (): Promise<ApiResponse> => {
       try {
-        const response = await axiosInstance.get('/check-auth');
+        const response = await api.get('/check-auth');
         return { data: response.data };
       } catch (error: any) {
-        return { error: error.response?.data?.message || 'Authentication check failed' };
+        console.error('Check auth API error:', error);
+        return { error: error.response?.data?.message || 'Failed to check authentication' };
       }
-    }
-  }
+    },
+  },
 };
+
+export default apiService;
