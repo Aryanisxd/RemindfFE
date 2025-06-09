@@ -1,68 +1,107 @@
 "use client"
 
-import type React from "react"
-import { useState, useMemo } from "react"
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+
+import { useMemo } from "react"
 import { Header } from "../components/header"
 import { SearchBar } from "../components/search-bar"
 import { ContentGrid } from "../components/content-grid"
 import { Sidebar } from "../components/sidebar"
-import type { ContentItem } from "../components/content-card"
 import { AddContentModal } from "../components/add-content-modal"
 import { PreviewModal } from "../components/preview-modal"
 import { ShareBrainModal } from "../components/share-brain-modal"
 import { ToastNotification } from "../components/toast-notification"
 
-const initialItems: ContentItem[] = [
-  {
-    id: "1",
-    type: "note",
-    title: "ewcewcewcewcew",
-    content: "dewdewdefe",
-    tags: ["work", "important"],
-  },
-  {
-    id: "2",
-    type: "link",
-    title: "httddedewde",
-    content: "This is a useful documentation link",
-    link: "http://example.com/link/to/document",
-    tags: ["reference", "documentation"],
-  },
-  {
-    id: "3",
-    type: "video",
-    title: "dqdqdq",
-    content: "Great tutorial video",
-    link: "https://www.youtube.com/watch?v=2V6lvCUPT8I",
-    tags: ["tutorial", "learning"],
-  },
-]
+interface Content {
+  _id: string;
+  id: string;
+  userId: {
+    email: string;
+  };
+  type: ContentType;
+  title: string;
+  content: string;
+  link?: string;
+  tags: string[];
+}
 
 export type ContentType = "note" | "link" | "video" | "tweet"
 
 export const Dashboard: React.FC = () => {
-  const [items, setItems] = useState<ContentItem[]>(initialItems)
+  const navigate = useNavigate();
+  const [contents, setContents] = useState<Content[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedContentType, setSelectedContentType] = useState<ContentType | "all">("all")
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [isShareBrainOpen, setIsShareBrainOpen] = useState(false)
-  const [selectedItem, setSelectedItem] = useState<ContentItem | null>(null)
+  const [selectedItem, setSelectedItem] = useState<Content | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState("")
 
   const contentCounts = useMemo(() => {
     const counts = {
-      all: items.length,
-      note: items.filter((item) => item.type === "note").length,
-      link: items.filter((item) => item.type === "link").length,
-      video: items.filter((item) => item.type === "video").length,
-      tweet: items.filter((item) => item.type === "tweet").length,
+      all: contents.length,
+      note: contents.filter((item) => item.type === "note").length,
+      link: contents.filter((item) => item.type === "link").length,
+      video: contents.filter((item) => item.type === "video").length,
+      tweet: contents.filter((item) => item.type === "tweet").length,
     }
     return counts
-  }, [items])
+  }, [contents])
+
+  const fetchContents = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      console.log('Fetching contents with token:', token); // Debug log
+      
+      if (!token) {
+        navigate('/signin');
+        return;
+      }
+
+      const response = await axios.get('http://localhost:8080/api/v1/content', {
+        headers: {
+          'Authorization': token.trim(),
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.data && Array.isArray(response.data.contents)) {
+        // Log the contents to verify user-specific data
+        console.log('Received contents:', response.data.contents);
+        
+        const mappedData = response.data.contents.map((item: any) => ({
+          ...item,
+          id: item._id
+        }));
+        setContents(mappedData);
+      } else {
+        setContents([]); // Set empty array if no contents
+      }
+    } catch (error: any) {
+      console.error('Error fetching contents:', error);
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        localStorage.removeItem('token');
+        sessionStorage.removeItem('token');
+        navigate('/signin');
+      } else {
+        setError('Failed to load contents. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchContents();
+  }, []);
 
   const handleToggleDarkMode = () => {
     setDarkMode(!darkMode)
@@ -92,13 +131,59 @@ export const Dashboard: React.FC = () => {
     setIsModalOpen(true)
   }
 
-  const handleDelete = (id: string) => {
-    setItems(items.filter((item) => item.id !== id))
-  }
+  const handleDelete = async (id: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/signin');
+        return;
+      }
+
+      // Find the content item to get its _id
+      const contentToDelete = contents.find(item => item.id === id);
+      console.log('Content to delete:', contentToDelete); // Debug log
+
+      if (!contentToDelete) {
+        handleShowToast("Content not found");
+        return;
+      }
+
+      // Make sure we're using the MongoDB _id
+      if (!contentToDelete._id) {
+        console.error('No _id found in content:', contentToDelete);
+        handleShowToast("Invalid content ID");
+        return;
+      }
+
+      console.log('Deleting content with _id:', contentToDelete._id); // Debug log
+
+      const response = await axios.delete(`http://localhost:8080/api/v1/content/${contentToDelete._id}`, {
+        headers: {
+          'Authorization': token.trim(),
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.status === 200) {
+        // Remove from local state only after successful backend deletion
+        setContents(contents.filter((item) => item.id !== id));
+        handleShowToast("Content deleted successfully");
+      }
+    } catch (error: any) {
+      console.error('Error deleting content:', error);
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        localStorage.removeItem('token');
+        sessionStorage.removeItem('token');
+        navigate('/signin');
+      } else {
+        handleShowToast("Failed to delete content");
+      }
+    }
+  };
 
   const handlePreview = (id: string) => {
     console.log("Preview clicked for item:", id) // Debug log
-    const item = items.find((item) => item.id === id)
+    const item = contents.find((item) => item._id === id)
     console.log("Found item:", item) // Debug log
     if (item) {
       setSelectedItem(item)
@@ -117,7 +202,7 @@ export const Dashboard: React.FC = () => {
   }
 
   const handleShareItem = (id: string) => {
-    const item = items.find((item) => item.id === id)
+    const item = contents.find((item) => item._id === id)
     if (!item) return
 
     if (item.link && item.link.trim()) {
@@ -143,26 +228,28 @@ export const Dashboard: React.FC = () => {
   }
 
   const handleAddNewContent = (newContent: {
-    type: ContentType
-    title: string
-    content: string
-    link?: string
-    tags: string[]
+    type: ContentType;
+    title: string;
+    content: string;
+    link?: string;
+    tags: string[];
   }) => {
-    const newItem = {
+    const newItem: Content = {
+      _id: Date.now().toString(),
       id: Date.now().toString(),
+      userId: { email: '' }, // This will be set by the backend
       type: newContent.type,
       title: newContent.title,
       content: newContent.content,
       link: newContent.link,
       tags: newContent.tags,
     }
-    setItems([...items, newItem])
+    setContents([...contents, newItem])
     handleShowToast("Content added successfully")
   }
 
   const filteredItems = useMemo(() => {
-    let filtered = items
+    let filtered = contents
 
     if (selectedContentType !== "all") {
       filtered = filtered.filter((item) => item.type === selectedContentType)
@@ -179,7 +266,23 @@ export const Dashboard: React.FC = () => {
     }
 
     return filtered
-  }, [items, searchQuery, selectedContentType])
+  }, [contents, searchQuery, selectedContentType])
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-xl text-red-500">{error}</div>
+      </div>
+    );
+  }
 
   return (
     <div

@@ -4,6 +4,7 @@ import { Eye, EyeOff, Moon, Sun } from 'lucide-react';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { ToastNotification } from '../components/toast-notification';
 import apiService from '../config';
+import axios from 'axios';
 
 const SignIn: React.FC = () => {
   const navigate = useNavigate();
@@ -12,6 +13,7 @@ const SignIn: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -32,28 +34,51 @@ const SignIn: React.FC = () => {
     setShowToast(true);
 
     try {
-      const response = await apiService.auth.signin(formData.email, formData.password);
+      const response = await axios.post('http://localhost:8080/api/v1/signin', 
+        {
+          email: formData.email,
+          password: formData.password
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          withCredentials: true
+        }
+      );
 
-      if (response.data?.token) {
+      console.log('Signin response:', response.data);
+
+      if (response.status === 200 && response.data.token) {
+        // Store token based on remember me preference
+        if (rememberMe) {
+          localStorage.setItem('token', response.data.token);
+          console.log('Token stored in localStorage:', response.data.token);
+        } else {
+          sessionStorage.setItem('token', response.data.token);
+          console.log('Token stored in sessionStorage:', response.data.token);
+        }
+        
         setToastMessage('Signed in successfully! Redirecting to dashboard...');
         setShowToast(true);
         setTimeout(() => {
-          navigate('/dashboard');
+          navigate('/dashboard', { replace: true });
         }, 2000);
-      } else if (response.error) {
-        setToastMessage(response.error);
-        setShowToast(true);
       }
     } catch (error: any) {
       console.error('Signin error:', error);
-      if (error.response?.status === 401) {
+      if (error.response?.status === 403) {
         setToastMessage('Invalid email or password. Please try again.');
-      } else if (error.response?.data?.message) {
-        setToastMessage(error.response.data.message);
+        setShowToast(true);
+      } else if (error.response?.status === 500) {
+        console.error('Server error details:', error.response?.data);
+        setToastMessage('Server error. Please try again later.');
+        setShowToast(true);
       } else {
-        setToastMessage('Network error. Please try again.');
+        setToastMessage(error.response?.data?.message || 'Something went wrong. Please try again.');
+        setShowToast(true);
       }
-      setShowToast(true);
     } finally {
       setIsLoading(false);
     }
@@ -192,6 +217,30 @@ const SignIn: React.FC = () => {
                   <Eye className="w-5 h-5" />
                 )}
               </button>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="remember"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className={`w-4 h-4 rounded border transition-colors duration-300 ${
+                  isDarkMode
+                    ? 'bg-white/10 border-white/20 text-white'
+                    : 'bg-black/5 border-black/20 text-black'
+                }`}
+              />
+              <label
+                htmlFor="remember"
+                className={`ml-2 text-sm transition-colors duration-300 ${
+                  isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                }`}
+              >
+                Remember me
+              </label>
             </div>
           </div>
 

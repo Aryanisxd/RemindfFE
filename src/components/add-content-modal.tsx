@@ -74,27 +74,104 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({ isOpen, onClos
   // All content types now require links
   const isFormValid = title.trim() && content.trim() && link.trim()
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (isFormValid) {
-      const finalType = selectedType as ContentType
-      onAdd({
-        type: finalType,
-        title: title.trim(),
-        content: content.trim(),
-        link: link.trim(),
-        tags,
-      })
-      setTitle("")
-      setContent("")
-      setLink("")
-      setTags([])
-      setNewTag("")
-      setSelectedType("note")
-      setYoutubePreview(null)
-      setShowTweetThumbnail(false)
-      onClose()
+      try {
+        // Get the token from localStorage
+        const token = localStorage.getItem('token');
+        console.log('Token being used:', token); // Debug log
+        
+        if (!token) {
+          throw new Error('Please login to create content');
+        }
+
+        // Map the frontend types to backend enum values
+        const typeMapping: Record<ContentType | "tweet", string> = {
+          note: "Document",
+          video: "Youtube",
+          tweet: "Tweet",
+          link: "Links"
+        };
+
+        // Log the request data for debugging
+        const requestData = {
+          type: typeMapping[selectedType],
+          title: title.trim(),
+          link: link.trim(),
+          description: content.trim(),
+          tags: tags.map(tag => tag.trim()), // Ensure tags are trimmed strings
+        };
+        console.log('Sending request with data:', requestData);
+
+        const response = await fetch('http://localhost:8080/api/v1/content', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': token.trim(), // Send raw token
+            'Accept': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify(requestData),
+        });
+
+        // Log the response status and headers
+        console.log('Response status:', response.status);
+        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+        // Try to get the response text first
+        const responseText = await response.text();
+        console.log('Raw response:', responseText);
+
+        let errorData;
+        try {
+          errorData = JSON.parse(responseText);
+        } catch (e) {
+          console.log('Response is not JSON:', responseText);
+        }
+
+        if (!response.ok) {
+          console.error('Error response:', errorData);
+          if (response.status === 401 || response.status === 403) {
+            // Handle authentication errors
+            localStorage.removeItem('token');
+            sessionStorage.removeItem('token');
+            window.location.href = '/signin';
+            return;
+          }
+          throw new Error(
+            errorData?.message || 
+            `Failed to create content: ${response.status} - ${responseText}`
+          );
+        }
+
+        const responseData = errorData; // We already parsed it above
+        console.log('Success response:', responseData);
+
+        const finalType = selectedType as ContentType;
+        onAdd({
+          type: finalType,
+          title: title.trim(),
+          content: content.trim(),
+          link: link.trim(),
+          tags,
+        });
+        
+        setTitle("");
+        setContent("");
+        setLink("");
+        setTags([]);
+        setNewTag("");
+        setSelectedType("note");
+        setYoutubePreview(null);
+        setShowTweetThumbnail(false);
+        onClose();
+      } catch (error) {
+        console.error('Error creating content:', error);
+        // Show error message to user
+        alert(error instanceof Error ? error.message : 'Failed to create content');
+      }
     }
-  }
+  };
 
   const handleCancel = () => {
     setTitle("")
