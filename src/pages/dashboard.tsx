@@ -103,6 +103,26 @@ export const Dashboard: React.FC = () => {
     fetchContents();
   }, []);
 
+  useEffect(() => {
+    const handlePopState = () => {
+      const confirmed = window.confirm('Are you sure you want to leave? You will be logged out.');
+      if (confirmed) {
+        localStorage.removeItem('token');
+        sessionStorage.removeItem('token');
+        window.location.href = '/';
+      } else {
+        window.history.pushState(null, '', window.location.href);
+      }
+    };
+
+    window.history.pushState(null, '', window.location.href);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
   const handleToggleDarkMode = () => {
     setDarkMode(!darkMode)
   }

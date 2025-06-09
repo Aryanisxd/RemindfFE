@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Moon, Sun } from 'lucide-react';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { ToastNotification } from '../components/toast-notification';
-import apiService from '../config';
+
 import axios from 'axios';
 
 const SignIn: React.FC = () => {
@@ -13,7 +13,7 @@ const SignIn: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
+  
 
   const [formData, setFormData] = useState({
     email: '',
@@ -52,10 +52,10 @@ const SignIn: React.FC = () => {
 
       if (response.status === 200 && response.data.token) {
         // Store token based on remember me preference
-        if (rememberMe) {
+        
           localStorage.setItem('token', response.data.token);
           console.log('Token stored in localStorage:', response.data.token);
-        } else {
+        
           sessionStorage.setItem('token', response.data.token);
           console.log('Token stored in sessionStorage:', response.data.token);
         }
@@ -66,7 +66,7 @@ const SignIn: React.FC = () => {
           navigate('/dashboard', { replace: true });
         }, 2000);
       }
-    } catch (error: any) {
+    catch (error: any) {
       console.error('Signin error:', error);
       if (error.response?.status === 403) {
         setToastMessage('Invalid email or password. Please try again.');
@@ -222,25 +222,8 @@ const SignIn: React.FC = () => {
 
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="remember"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className={`w-4 h-4 rounded border transition-colors duration-300 ${
-                  isDarkMode
-                    ? 'bg-white/10 border-white/20 text-white'
-                    : 'bg-black/5 border-black/20 text-black'
-                }`}
-              />
-              <label
-                htmlFor="remember"
-                className={`ml-2 text-sm transition-colors duration-300 ${
-                  isDarkMode ? 'text-gray-300' : 'text-gray-700'
-                }`}
-              >
-                Remember me
-              </label>
+              
+             
             </div>
           </div>
 
