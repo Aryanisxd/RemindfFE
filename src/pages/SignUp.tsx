@@ -83,8 +83,7 @@ const SignUp: React.FC = () => {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
           },
-          timeout: 10000, // 10 second timeout
-          withCredentials: false // Remove credentials since we're not using cookies
+          withCredentials: true
         }
       );
 

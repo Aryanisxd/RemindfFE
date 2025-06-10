@@ -34,48 +34,15 @@ const SignIn: React.FC = () => {
     setShowToast(false);
 
     try {
-      let retries = 0;
-      const maxRetries = 2;
-      
-      const attemptSignIn = async () => {
-        try {
-          console.log('Attempting signin with:', { email: formData.email, password: '***' });
-          const response = await axios.post('https://re-mind-eosin.vercel.app/api/v1/signin', 
-            {
-              email: formData.email.trim(),
-              password: formData.password
-            }, 
-            {
-              headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-              },
-              timeout: 20000,
-              withCredentials: false
-            }
-          );
-          console.log('Signin response:', response.data);
-          return response;
-        } catch (error: any) {
-          console.error('Signin attempt error:', {
-            status: error.response?.status,
-            data: error.response?.data,
-            message: error.message
-          });
-          
-          if (error.code === 'ECONNABORTED' && retries < maxRetries) {
-            retries++;
-            console.log(`Retrying signin attempt ${retries} of ${maxRetries}`);
-            setToastMessage(`Connection timed out. Retrying... (${retries}/${maxRetries})`);
-            setShowToast(true);
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            return attemptSignIn();
-          }
-          throw error;
+      const response = await axios.post('https://re-mind-eosin.vercel.app/api/v1/signin', {
+        email: formData.email,
+        password: formData.password
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         }
-      };
-
-      const response = await attemptSignIn();
+      });
 
       if (response.status === 200 && response.data.token) {
         localStorage.setItem('token', response.data.token);
@@ -85,34 +52,17 @@ const SignIn: React.FC = () => {
           navigate('/dashboard');
         }, 1000);
       } else {
-        console.error('Invalid response:', response);
         setError('Invalid response from server');
-        setToastMessage('Invalid response from server');
-        setShowToast(true);
       }
     } catch (error: any) {
-      console.error('Signin error details:', {
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message
-      });
-      
+      console.error('Signin error:', error);
       if (error.response?.status === 401) {
         setError('Invalid email or password');
-        setToastMessage('Invalid email or password');
       } else if (error.response?.status === 403) {
         setError('Account is locked. Please try again later.');
-        setToastMessage('Account is locked. Please try again later.');
-      } else if (error.code === 'ECONNABORTED') {
-        setError('Server is taking too long to respond. Please try again.');
-        setToastMessage('Server is taking too long to respond. Please try again.');
       } else {
-        const errorMessage = error.response?.data?.message || 'An error occurred during sign in';
-        console.error('Server error:', errorMessage);
-        setError(errorMessage);
-        setToastMessage(errorMessage);
+        setError(error.response?.data?.message || 'An error occurred during sign in');
       }
-      setShowToast(true);
     }
   };
 
