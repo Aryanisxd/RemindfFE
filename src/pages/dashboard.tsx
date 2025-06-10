@@ -45,14 +45,33 @@ export const Dashboard: React.FC = () => {
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState("")
 
+  const filteredContents = useMemo(() => {
+    console.log('Selected Content Type:', selectedContentType); // Debug log
+    console.log('All Contents:', contents); // Debug log
+    
+    const filtered = contents.filter((item) => {
+      if (selectedContentType === "all") return true;
+      const itemType = item.type.toLowerCase();
+      const selectedType = selectedContentType.toLowerCase();
+      console.log(`Comparing item type "${itemType}" with selected type "${selectedType}"`); // Debug log
+      console.log(`Item details:`, item); // Debug log
+      return itemType === selectedType;
+    });
+    
+    console.log('Filtered Contents:', filtered); // Debug log
+    return filtered;
+  }, [contents, selectedContentType]);
+
   const contentCounts = useMemo(() => {
     const counts = {
       all: contents.length,
-      note: contents.filter((item) => item.type === "note").length,
-      link: contents.filter((item) => item.type === "link").length,
-      video: contents.filter((item) => item.type === "video").length,
-      tweet: contents.filter((item) => item.type === "tweet").length,
+      note: contents.filter((item) => item.type.toLowerCase() === "note").length,
+      link: contents.filter((item) => item.type.toLowerCase() === "link").length,
+      video: contents.filter((item) => item.type.toLowerCase() === "video").length,
+      tweet: contents.filter((item) => item.type.toLowerCase() === "tweet").length,
     }
+    console.log('Content Counts:', counts); // Debug log
+    console.log('Raw content types:', contents.map(item => item.type)); // Debug log
     return counts
   }, [contents])
 
@@ -77,10 +96,43 @@ export const Dashboard: React.FC = () => {
         // Log the contents to verify user-specific data
         console.log('Received contents:', response.data.contents);
         
-        const mappedData = response.data.contents.map((item: any) => ({
-          ...item,
-          id: item._id
-        }));
+        const mappedData = response.data.contents.map((item: any) => {
+          console.log('Mapping item:', item); // Debug log
+          
+          // Normalize the content type
+          let normalizedType = item.type.toLowerCase();
+          switch (normalizedType) {
+            case 'youtube':
+              normalizedType = 'video';
+              break;
+            case 'document':
+            case 'documents':
+            case 'note':
+            case 'notes':
+              normalizedType = 'note';
+              break;
+            case 'link':
+            case 'links':
+            case 'url':
+              normalizedType = 'link';
+              break;
+            case 'tweet':
+            case 'twitter':
+              normalizedType = 'tweet';
+              break;
+          }
+          
+          const mappedItem = {
+            ...item,
+            id: item._id,
+            _id: item._id,
+            content: item.description,
+            type: normalizedType as ContentType
+          };
+          console.log('Mapped item:', mappedItem); // Debug log
+          return mappedItem;
+        });
+        console.log('Final mapped data:', mappedData); // Debug log
         setContents(mappedData);
       } else {
         setContents([]); // Set empty array if no contents
@@ -89,7 +141,6 @@ export const Dashboard: React.FC = () => {
       console.error('Error fetching contents:', error);
       if (error.response?.status === 401 || error.response?.status === 403) {
         localStorage.removeItem('token');
-        sessionStorage.removeItem('token');
         navigate('/signin');
       } else {
         setError('Failed to load contents. Please try again.');
@@ -108,7 +159,6 @@ export const Dashboard: React.FC = () => {
       const confirmed = window.confirm('Are you sure you want to leave? You will be logged out.');
       if (confirmed) {
         localStorage.removeItem('token');
-        sessionStorage.removeItem('token');
         window.location.href = '/';
       } else {
         window.history.pushState(null, '', window.location.href);
@@ -140,7 +190,8 @@ export const Dashboard: React.FC = () => {
   }
 
   const handleContentTypeSelect = (type: ContentType | "all") => {
-    setSelectedContentType(type)
+    console.log('Content Type Selected:', type); // Debug log
+    setSelectedContentType(type);
   }
 
   const handleShare = () => {
@@ -186,7 +237,6 @@ export const Dashboard: React.FC = () => {
       console.error('Error deleting content:', error);
       if (error.response?.status === 401 || error.response?.status === 403) {
         localStorage.removeItem('token');
-        sessionStorage.removeItem('token');
         navigate('/signin');
       } else {
         handleShowToast("Failed to delete content");
@@ -196,12 +246,14 @@ export const Dashboard: React.FC = () => {
 
   const handlePreview = (id: string) => {
     console.log("Preview clicked for item:", id) // Debug log
-    const item = contents.find((item) => item._id === id)
+    const item = contents.find((item) => item.id === id)
     console.log("Found item:", item) // Debug log
     if (item) {
       setSelectedItem(item)
       setIsPreviewOpen(true)
       console.log("Preview modal should open") // Debug log
+    } else {
+      handleShowToast("Content not found");
     }
   }
 
@@ -240,33 +292,25 @@ export const Dashboard: React.FC = () => {
     }
   }
 
-  const handleAddNewContent = (newContent: {
+  const handleAddNewContent = async (newContent: {
     type: ContentType;
     title: string;
     content: string;
     link?: string;
     tags: string[];
   }) => {
-    const newItem: Content = {
-      _id: Date.now().toString(),
-      id: Date.now().toString(),
-      userId: { email: '' }, // This will be set by the backend
-      type: newContent.type,
-      title: newContent.title,
-      content: newContent.content,
-      link: newContent.link,
-      tags: newContent.tags,
-    }
-    setContents([...contents, newItem])
-    handleShowToast("Content added successfully")
+    // Show loading toast
+    handleShowToast("Adding content...");
+    
+    // Fetch updated contents after a short delay to allow backend to process
+    setTimeout(async () => {
+      await fetchContents();
+      handleShowToast("Content added successfully");
+    }, 1000);
   }
 
   const filteredItems = useMemo(() => {
-    let filtered = contents
-
-    if (selectedContentType !== "all") {
-      filtered = filtered.filter((item) => item.type === selectedContentType)
-    }
+    let filtered = filteredContents
 
     if (searchQuery) {
       filtered = filtered.filter(
@@ -279,7 +323,7 @@ export const Dashboard: React.FC = () => {
     }
 
     return filtered
-  }, [contents, searchQuery, selectedContentType])
+  }, [filteredContents, searchQuery])
 
   if (isLoading) {
     return (
@@ -328,14 +372,28 @@ export const Dashboard: React.FC = () => {
             darkMode={darkMode}
           />
           <div className={`flex-1 overflow-y-auto ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
-            <ContentGrid
-              items={filteredItems}
-              onDelete={handleDelete}
-              onPreview={handlePreview}
-              onShare={handleShareItem}
-              onShowToast={handleShowToast}
-              darkMode={darkMode}
-            />
+            {isLoading ? (
+              <div className="flex items-center justify-center h-64">
+                <div className="text-lg">Loading...</div>
+              </div>
+            ) : error ? (
+              <div className="flex items-center justify-center h-64">
+                <div className="text-lg text-red-500">{error}</div>
+              </div>
+            ) : filteredItems.length === 0 ? (
+              <div className="flex items-center justify-center h-64">
+                <div className="text-lg">No content found</div>
+              </div>
+            ) : (
+              <ContentGrid
+                items={filteredItems}
+                onDelete={handleDelete}
+                onPreview={handlePreview}
+                onShare={handleShareItem}
+                onShowToast={handleShowToast}
+                darkMode={darkMode}
+              />
+            )}
           </div>
         </div>
       </div>

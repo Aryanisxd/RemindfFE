@@ -13,6 +13,7 @@ const SignIn: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [error, setError] = useState<string | null>(null);
   
 
   const [formData, setFormData] = useState({
@@ -27,60 +28,41 @@ const SignIn: React.FC = () => {
     });
   };
 
-  const handleSubmit = async (e: React.ChangeEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setToastMessage('Signing in...');
-    setShowToast(true);
+    setError(null);
+    setShowToast(false);
 
     try {
-      const response = await axios.post('http://localhost:8080/api/v1/signin', 
-        {
-          email: formData.email,
-          password: formData.password
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          withCredentials: true
+      const response = await axios.post('http://localhost:8080/api/v1/signin', {
+        email: formData.email,
+        password: formData.password
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         }
-      );
-
-      console.log('Signin response:', response.data);
+      });
 
       if (response.status === 200 && response.data.token) {
-        // Store token based on remember me preference
-        
-          localStorage.setItem('token', response.data.token);
-          console.log('Token stored in localStorage:', response.data.token);
-        
-          sessionStorage.setItem('token', response.data.token);
-          console.log('Token stored in sessionStorage:', response.data.token);
-        }
-        
-        setToastMessage('Signed in successfully! Redirecting to dashboard...');
+        localStorage.setItem('token', response.data.token);
+        setToastMessage('Signed in successfully!');
         setShowToast(true);
         setTimeout(() => {
-          navigate('/dashboard', { replace: true });
-        }, 2000);
-      }
-    catch (error: any) {
-      console.error('Signin error:', error);
-      if (error.response?.status === 403) {
-        setToastMessage('Invalid email or password. Please try again.');
-        setShowToast(true);
-      } else if (error.response?.status === 500) {
-        console.error('Server error details:', error.response?.data);
-        setToastMessage('Server error. Please try again later.');
-        setShowToast(true);
+          navigate('/dashboard');
+        }, 1000);
       } else {
-        setToastMessage(error.response?.data?.message || 'Something went wrong. Please try again.');
-        setShowToast(true);
+        setError('Invalid response from server');
       }
-    } finally {
-      setIsLoading(false);
+    } catch (error: any) {
+      console.error('Signin error:', error);
+      if (error.response?.status === 401) {
+        setError('Invalid email or password');
+      } else if (error.response?.status === 403) {
+        setError('Account is locked. Please try again later.');
+      } else {
+        setError(error.response?.data?.message || 'An error occurred during sign in');
+      }
     }
   };
 

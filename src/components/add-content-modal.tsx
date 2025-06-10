@@ -98,64 +98,38 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({ isOpen, onClos
           type: typeMapping[selectedType],
           title: title.trim(),
           link: link.trim(),
-          description : content.trim() ,
+          description: content.trim(),
           tags: tags.map(tag => tag.trim()), // Ensure tags are trimmed strings
         };
         
-
         const response = await fetch('http://localhost:8080/api/v1/content', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': token.trim(), // Send raw token
+            'Authorization': token.trim(),
             'Accept': 'application/json'
           },
-          credentials: 'include',
           body: JSON.stringify(requestData),
         });
 
-        // Log the response status and headers
-        console.log('Response status:', response.status);
-        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
-        // Try to get the response text first
-        const responseText = await response.text();
-        console.log('Raw response:', responseText);
-
-        let errorData;
-        try {
-          errorData = JSON.parse(responseText);
-        } catch (e) {
-          console.log('Response is not JSON:', responseText);
-        }
-
         if (!response.ok) {
-          console.error('Error response:', errorData);
-          if (response.status === 401 || response.status === 403) {
-            // Handle authentication errors
-            localStorage.removeItem('token');
-            sessionStorage.removeItem('token');
-            window.location.href = '/signin';
-            return;
-          }
-          throw new Error(
-            errorData?.message || 
-            `Failed to create content: ${response.status} - ${responseText}`
-          );
+          const errorData = await response.json();
+          throw new Error(errorData?.message || `Failed to create content: ${response.status}`);
         }
 
-        const responseData = errorData; // We already parsed it above
+        const responseData = await response.json();
         console.log('Success response:', responseData);
 
-        const finalType = selectedType as ContentType;
+        // Call onAdd with the response data
         onAdd({
-          type: finalType,
+          type: selectedType as ContentType,
           title: title.trim(),
           content: content,
           link: link.trim(),
           tags,
         });
         
+        // Reset form and close modal
         setTitle("");
         setContent("");
         setLink("");
