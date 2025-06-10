@@ -102,13 +102,14 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({ isOpen, onClos
           tags: tags.map(tag => tag.trim()), // Ensure tags are trimmed strings
         };
         
-        const response = await fetch('http://localhost:8080/api/v1/content', {
+        const response = await fetch('https://re-mind-eosin.vercel.app/api/v1/content', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': token.trim(),
             'Accept': 'application/json'
           },
+          credentials: 'include',
           body: JSON.stringify(requestData),
         });
 

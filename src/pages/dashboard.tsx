@@ -88,8 +88,10 @@ export const Dashboard: React.FC = () => {
       const response = await axios.get('https://re-mind-eosin.vercel.app/api/v1/content', {
         headers: {
           'Authorization': token.trim(),
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        withCredentials: true
       });
 
       if (response.data && Array.isArray(response.data.contents)) {
@@ -224,8 +226,10 @@ export const Dashboard: React.FC = () => {
       const response = await axios.delete(`https://re-mind-eosin.vercel.app/api/v1/content/${contentToDelete._id}`, {
         headers: {
           'Authorization': token.trim(),
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        withCredentials: true
       });
 
       if (response.status === 200) {
