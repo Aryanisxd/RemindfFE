@@ -76,7 +76,7 @@ const SignUp: React.FC = () => {
         password: '***' // Hide password in logs
       });
 
-      const response = await axios.post('http://localhost:8080/api/v1/signup', 
+      const response = await axios.post('https://re-mind-eosin.vercel.app/api/v1/signup', 
         requestData,
         {
           headers: {

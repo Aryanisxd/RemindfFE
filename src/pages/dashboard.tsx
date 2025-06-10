@@ -85,7 +85,7 @@ export const Dashboard: React.FC = () => {
         return;
       }
 
-      const response = await axios.get('http://localhost:8080/api/v1/content', {
+      const response = await axios.get('https://re-mind-eosin.vercel.app/api/v1/content', {
         headers: {
           'Authorization': token.trim(),
           'Content-Type': 'application/json'
@@ -221,7 +221,7 @@ export const Dashboard: React.FC = () => {
 
       console.log('Deleting content with _id:', contentToDelete._id); // Debug log
 
-      const response = await axios.delete(`http://localhost:8080/api/v1/content/${contentToDelete._id}`, {
+      const response = await axios.delete(`https://re-mind-eosin.vercel.app/api/v1/content/${contentToDelete._id}`, {
         headers: {
           'Authorization': token.trim(),
           'Content-Type': 'application/json'
