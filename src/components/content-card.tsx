@@ -76,15 +76,32 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         const thumbnailUrl = getYouTubeThumbnail(videoId, "medium")
         return (
           <div className="mb-3 relative group">
-            <img
-              src={thumbnailUrl || "/placeholder.svg"}
-              alt={`YouTube thumbnail for ${item.title}`}
-              className={`w-full h-32 object-cover rounded-lg border ${darkMode ? "border-gray-600" : "border-gray-200"}`}
-              onError={(e) => {
-                // Hide image if thumbnail fails to load
-                e.currentTarget.style.display = "none"
-              }}
-            />
+            <div className={`w-full h-32 rounded-lg border overflow-hidden ${darkMode ? "border-gray-600" : "border-gray-200"}`}>
+              <img
+                src={thumbnailUrl}
+                alt={`YouTube thumbnail for ${item.title}`}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  // If thumbnail fails to load, show a fallback with video ID
+                  e.currentTarget.style.display = "none";
+                  const parent = e.currentTarget.parentElement;
+                  if (parent) {
+                    parent.innerHTML = `
+                      <div class="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+                        <div class="text-center">
+                          <div class="w-12 h-12 mx-auto mb-2 bg-red-600 rounded-full flex items-center justify-center">
+                            <svg class="w-6 h-6 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M8 5v14l11-7z" />
+                            </svg>
+                          </div>
+                          <span class="text-xs text-gray-600 dark:text-gray-400">YouTube Video</span>
+                        </div>
+                      </div>
+                    `;
+                  }
+                }}
+              />
+            </div>
             {/* Play button overlay */}
             <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200">
               <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center">
