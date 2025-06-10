@@ -41,7 +41,9 @@ const SignIn: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
-        }
+        },
+        timeout: 10000, // 10 second timeout
+        withCredentials: false // Remove credentials since we're using JWT
       });
 
       if (response.status === 200 && response.data.token) {
@@ -53,16 +55,25 @@ const SignIn: React.FC = () => {
         }, 1000);
       } else {
         setError('Invalid response from server');
+        setToastMessage('Invalid response from server');
+        setShowToast(true);
       }
     } catch (error: any) {
       console.error('Signin error:', error);
       if (error.response?.status === 401) {
         setError('Invalid email or password');
+        setToastMessage('Invalid email or password');
       } else if (error.response?.status === 403) {
         setError('Account is locked. Please try again later.');
+        setToastMessage('Account is locked. Please try again later.');
+      } else if (error.code === 'ECONNABORTED') {
+        setError('Request timed out. Please try again.');
+        setToastMessage('Request timed out. Please try again.');
       } else {
         setError(error.response?.data?.message || 'An error occurred during sign in');
+        setToastMessage(error.response?.data?.message || 'An error occurred during sign in');
       }
+      setShowToast(true);
     }
   };
 
