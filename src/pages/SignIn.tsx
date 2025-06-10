@@ -34,17 +34,38 @@ const SignIn: React.FC = () => {
     setShowToast(false);
 
     try {
-      const response = await axios.post('https://re-mind-eosin.vercel.app/api/v1/signin', {
-        email: formData.email,
-        password: formData.password
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        timeout: 10000, // 10 second timeout
-        withCredentials: false // Remove credentials since we're using JWT
-      });
+      let retries = 0;
+      const maxRetries = 2;
+      
+      const attemptSignIn = async () => {
+        try {
+          const response = await axios.post('https://re-mind-eosin.vercel.app/api/v1/signin', {
+            email: formData.email,
+            password: formData.password
+          }, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            timeout: 20000, // Increased to 20 seconds
+            withCredentials: false
+          });
+          return response;
+        } catch (error: any) {
+          if (error.code === 'ECONNABORTED' && retries < maxRetries) {
+            retries++;
+            console.log(`Retrying signin attempt ${retries} of ${maxRetries}`);
+            setToastMessage(`Connection timed out. Retrying... (${retries}/${maxRetries})`);
+            setShowToast(true);
+            // Wait for 2 seconds before retrying
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            return attemptSignIn();
+          }
+          throw error;
+        }
+      };
+
+      const response = await attemptSignIn();
 
       if (response.status === 200 && response.data.token) {
         localStorage.setItem('token', response.data.token);
@@ -67,8 +88,8 @@ const SignIn: React.FC = () => {
         setError('Account is locked. Please try again later.');
         setToastMessage('Account is locked. Please try again later.');
       } else if (error.code === 'ECONNABORTED') {
-        setError('Request timed out. Please try again.');
-        setToastMessage('Request timed out. Please try again.');
+        setError('Server is taking too long to respond. Please try again.');
+        setToastMessage('Server is taking too long to respond. Please try again.');
       } else {
         setError(error.response?.data?.message || 'An error occurred during sign in');
         setToastMessage(error.response?.data?.message || 'An error occurred during sign in');
