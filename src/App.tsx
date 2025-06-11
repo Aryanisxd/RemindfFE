@@ -1,5 +1,6 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 
 import './index.css'
 import LandingPage from './pages/landingPage';
@@ -21,6 +22,7 @@ const App: React.FC = () => {
         </Routes>
         
       </div>
+      <Analytics />
     </Router>
     
   )
