@@ -1,6 +1,6 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Analytics } from "@vercel/analytics/next"
+
 import './index.css'
 import LandingPage from './pages/landingPage';
 import { Dashboard } from './pages/dashboard';
@@ -19,7 +19,7 @@ const App: React.FC = () => {
           <Route path="/dashboard" element={<Dashboard />} />
           
         </Routes>
-        <Analytics/>
+        
       </div>
     </Router>
     
