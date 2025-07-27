@@ -49,7 +49,7 @@ const LandingPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row gap-6 animate-slide-up">
           {/* GitHub Button */}
           <a
-            href="https://github.com/Aryanisxd"
+            href="https://github.com/Aryanisxd/RemindfFE"
             target="_blank"
             rel="noopener noreferrer"
             className={`group relative px-8 py-4 backdrop-blur-sm border rounded-2xl font-semibold transition-all duration-300 hover:scale-105 hover:shadow-2xl ${
